@@ -6,6 +6,7 @@
 
     <modelVersion>4.0.0</modelVersion>
 
+    <!-- Spring Boot -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -13,6 +14,7 @@
         <relativePath/>
     </parent>
 
+    <!-- Project Information -->
     <groupId>com.abhishek</groupId>
     <artifactId>spring-boot-demo</artifactId>
     <version>1.0</version>
@@ -20,14 +22,21 @@
     <name>spring-boot-demo</name>
     <url></url>
 
+    <!-- Project Properties -->
     <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Java -->
         <java.version>17</java.version>
 
+        <!-- Encoding -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
         <!-- Override Spring Boot managed Tomcat version -->
-        <tomcat.version>10.1.57</tomcat.version>
+        <tomcat.version>10.1.60</tomcat.version>
+
     </properties>
 
+    <!-- Dependencies -->
     <dependencies>
 
         <!-- Spring Boot Web -->
@@ -49,7 +58,7 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Development Tools -->
+        <!-- Spring Boot DevTools -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
@@ -58,7 +67,10 @@
 
     </dependencies>
 
+    <!-- Build Configuration -->
     <build>
+
+        <!-- Generated JAR name -->
         <finalName>spring-boot-web</finalName>
 
         <plugins>
@@ -70,6 +82,7 @@
             </plugin>
 
         </plugins>
+
     </build>
 
 </project>
