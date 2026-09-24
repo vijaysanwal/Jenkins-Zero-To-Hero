@@ -33,22 +33,40 @@ pipeline {
         }
       }
     }
-    stage('Build and Push Docker Image') {
-      environment {
-        DOCKER_IMAGE = "abhishekf5/ultimate-cicd:${BUILD_NUMBER}"
-        // DOCKERFILE_LOCATION = "java-maven-sonar-argocd-helm-k8s/spring-boot-app/Dockerfile"
-        REGISTRY_CREDENTIALS = credentials('docker-cred')
-      }
-      steps {
-        script {
-            sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && docker build -t ${DOCKER_IMAGE} .'
-            def dockerImage = docker.image("${DOCKER_IMAGE}")
-            docker.withRegistry('https://index.docker.io/v1/', "docker-cred") {
-                dockerImage.push()
-            }
-        }
-      }
+stage('Build and Push Docker Image') {
+    environment {
+        AWS_REGION = 'ap-south-1'
+        ECR_REGISTRY = '892387177992.dkr.ecr.ap-south-1.amazonaws.com'
+        ECR_REPOSITORY = 'test'
+        IMAGE_TAG = "${BUILD_NUMBER}"
     }
+
+    steps {
+        script {
+            sh '''
+                cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
+
+                echo "Logging in to AWS ECR..."
+
+                aws ecr get-login-password --region ${AWS_REGION} | \
+                docker login \
+                    --username AWS \
+                    --password-stdin ${ECR_REGISTRY}
+
+                echo "Building Docker image..."
+
+                docker build \
+                    -t ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG} \
+                    .
+
+                echo "Pushing Docker image..."
+
+                docker push \
+                    ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+            '''
+        }
+    }
+}
     stage('Update Deployment File') {
         environment {
             GIT_REPO_NAME = "Jenkins-Zero-To-Hero"
