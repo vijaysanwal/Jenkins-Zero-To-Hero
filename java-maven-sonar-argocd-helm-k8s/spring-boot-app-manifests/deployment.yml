@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
       - name: spring-boot-app
-        image: abhishekf5/ultimate-cicd:15
+        image: image: 892387177992.dkr.ecr.ap-south-1.amazonaws.com/test:15
         ports:
         - containerPort: 8080
