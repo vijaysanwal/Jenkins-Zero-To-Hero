@@ -9,12 +9,20 @@ pipeline {
 
         stage('Checkout') {
             steps {
+
+                // Skip Jenkins-generated deployment commits
+                scmSkip(
+                    deleteBuild: true,
+                    skipPattern: '.*\\[ci skip\\].*'
+                )
+
                 sh 'echo passed'
             }
         }
 
         stage('Build and Test') {
             steps {
+
                 sh 'ls -ltr'
 
                 sh '''
@@ -26,10 +34,12 @@ pipeline {
 
         stage('Static Code Analysis') {
             steps {
+
                 withCredentials([string(
                     credentialsId: 'sonarqube',
                     variable: 'SONAR_AUTH_TOKEN'
                 )]) {
+
                     sh '''
                         cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
 
@@ -50,6 +60,7 @@ pipeline {
             }
 
             steps {
+
                 sh '''
                     cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
 
@@ -74,6 +85,7 @@ pipeline {
             }
 
             steps {
+
                 sh '''
                     echo "Running Trivy vulnerability scan..."
 
@@ -97,6 +109,7 @@ pipeline {
             }
 
             steps {
+
                 sh '''
                     cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
 
@@ -129,6 +142,7 @@ pipeline {
             }
 
             steps {
+
                 withCredentials([string(
                     credentialsId: 'github',
                     variable: 'GITHUB_TOKEN'
@@ -138,6 +152,8 @@ pipeline {
                         git config user.email "your-email@example.com"
                         git config user.name "vijay sanwal"
 
+                        echo "Updating deployment image to ${BUILD_NUMBER}..."
+
                         sed -i -E \
                         "s|(image: .*amazonaws.com/test:)[0-9]+|\\1${BUILD_NUMBER}|" \
                         java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
@@ -145,13 +161,16 @@ pipeline {
                         git add \
                         java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
-                        git diff --cached --quiet || \
-                        git commit \
-                        -m "Update deployment image to version ${BUILD_NUMBER}"
+                        if git diff --cached --quiet; then
+                            echo "No deployment changes detected."
+                        else
+                            git commit \
+                            -m "Update deployment image to version ${BUILD_NUMBER} [ci skip]"
 
-                        git push \
-                        https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git \
-                        HEAD:vijay
+                            git push \
+                            https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git \
+                            HEAD:vijay
+                        fi
                     '''
                 }
             }
