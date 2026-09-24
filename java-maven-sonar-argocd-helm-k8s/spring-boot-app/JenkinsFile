@@ -1,98 +1,114 @@
 pipeline {
-  agent any
-  tools {
+    agent any
+
+    tools {
         maven 'Maven-3.9'
     }
-  stages {
-    stage('Checkout') {
-      steps {
-        sh 'echo passed'
-        //git branch: 'main', url: 'https://github.com/iam-veeramalla/Jenkins-Zero-To-Hero.git'
-      }
-    }
-    stage('Build and Test') {
-      steps {
-        sh 'ls -ltr'
-        // build the project and create a JAR file
-        sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package'
-      }
-    }
-    stage('Static Code Analysis') {
-    steps {
-        withCredentials([string(
-            credentialsId: 'sonarqube',
-            variable: 'SONAR_AUTH_TOKEN'
-        )]) {
-            sh '''
-                cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
 
-                mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-                   -Dsonar.login=$SONAR_AUTH_TOKEN \
-                   -Dsonar.host.url=http://3.108.53.139:9000
-            '''
+    stages {
+
+        stage('Checkout') {
+            steps {
+                sh 'echo passed'
+            }
         }
-      }
-    }
-stage('Build and Push Docker Image') {
-    environment {
-        AWS_REGION = 'ap-south-1'
-        ECR_REGISTRY = '892387177992.dkr.ecr.ap-south-1.amazonaws.com'
-        ECR_REPOSITORY = 'test'
-        IMAGE_TAG = "${BUILD_NUMBER}"
-    }
 
-    steps {
-        script {
-            sh '''
-                cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
+        stage('Build and Test') {
+            steps {
+                sh 'ls -ltr'
 
-                echo "Logging in to AWS ECR..."
+                sh '''
+                    cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
+                    mvn clean package
+                '''
+            }
+        }
 
-                aws ecr get-login-password --region ${AWS_REGION} | \
-                docker login \
-                    --username AWS \
-                    --password-stdin ${ECR_REGISTRY}
+        stage('Static Code Analysis') {
+            steps {
+                withCredentials([string(
+                    credentialsId: 'sonarqube',
+                    variable: 'SONAR_AUTH_TOKEN'
+                )]) {
+                    sh '''
+                        cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
 
-                echo "Building Docker image..."
+                        mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+                           -Dsonar.login=$SONAR_AUTH_TOKEN \
+                           -Dsonar.host.url=http://3.108.53.139:9000
+                    '''
+                }
+            }
+        }
 
-                docker build \
-                    -t ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG} \
-                    .
+        stage('Build and Push Docker Image') {
 
-                echo "Pushing Docker image..."
+            environment {
+                AWS_REGION = 'ap-south-1'
+                ECR_REGISTRY = '892387177992.dkr.ecr.ap-south-1.amazonaws.com'
+                ECR_REPOSITORY = 'test'
+                IMAGE_TAG = "${BUILD_NUMBER}"
+            }
 
-                docker push \
-                    ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
-            '''
+            steps {
+                sh '''
+                    cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
+
+                    echo "Logging in to AWS ECR..."
+
+                    aws ecr get-login-password --region ${AWS_REGION} | \
+                    docker login \
+                        --username AWS \
+                        --password-stdin ${ECR_REGISTRY}
+
+                    echo "Building multi-platform Docker image..."
+
+                    docker buildx build \
+                        --platform linux/amd64,linux/arm64 \
+                        -t ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG} \
+                        --push \
+                        .
+
+                    echo "Docker image pushed successfully:"
+                    echo "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+                '''
+            }
+        }
+
+        stage('Update Deployment File') {
+
+            environment {
+                GIT_REPO_NAME = "Jenkins-Zero-To-Hero"
+                GIT_USER_NAME = "vijaysanwal"
+            }
+
+            steps {
+                withCredentials([string(
+                    credentialsId: 'github',
+                    variable: 'GITHUB_TOKEN'
+                )]) {
+
+                    sh '''
+                        git config user.email "your-email@example.com"
+                        git config user.name "vijay sanwal"
+
+                        sed -i -E \
+                        "s|(image: .*amazonaws.com/test:)[0-9]+|\\1${BUILD_NUMBER}|" \
+                        java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+
+                        git add \
+                        java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+
+                        git diff --cached --quiet || \
+                        git commit \
+                        -m "Update deployment image to version ${BUILD_NUMBER}"
+
+                        git push \
+                        https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git \
+                        HEAD:vijay
+                    '''
+                }
+            }
         }
     }
-}
-
-stage('Update Deployment File') {
-    environment {
-        GIT_REPO_NAME = "Jenkins-Zero-To-Hero"
-        GIT_USER_NAME = "vijaysanwal"
-    }
-
-    steps {
-        withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-            sh '''
-                git config user.email "your-email@example.com"
-                git config user.name "vijay sanwal"
-
-                sed -i -E \
-                "s|(image: .*amazonaws.com/test:)[0-9]+|\\1${BUILD_NUMBER}|" \
-                java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-
-                git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-
-                git diff --cached --quiet || \
-                git commit -m "Update deployment image to version ${BUILD_NUMBER}"
-
-                git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git HEAD:vijay
-            '''
-        }
-    }
-}
-}
 }
