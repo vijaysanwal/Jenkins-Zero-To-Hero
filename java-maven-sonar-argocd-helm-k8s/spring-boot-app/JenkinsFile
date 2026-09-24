@@ -80,11 +80,13 @@ stage('Update Deployment File') {
                 git config user.email "your-email@example.com"
                 git config user.name "vijay sanwal"
 
-                sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" \
+                sed -i -E \
+                "s|(image: .*amazonaws.com/test:)[0-9]+|\\1${BUILD_NUMBER}|" \
                 java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
                 git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
+                git diff --cached --quiet || \
                 git commit -m "Update deployment image to version ${BUILD_NUMBER}"
 
                 git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git HEAD:vijay
@@ -92,5 +94,4 @@ stage('Update Deployment File') {
         }
     }
 }
-  }
 }
