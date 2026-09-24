@@ -1,13 +1,12 @@
-# You can change this base image to anything else
-# But make sure to use the correct version of Java
-FROM adoptopenjdk/openjdk11:alpine-jre
+# Java 11 runtime with AMD64 + ARM64 support
+FROM eclipse-temurin:11-jre
 
-# Simply the artifact path
 ARG artifact=target/spring-boot-web.jar
 
 WORKDIR /opt/app
 
 COPY ${artifact} app.jar
 
-# This should not be changed
+EXPOSE 8080
+
 ENTRYPOINT ["java","-jar","app.jar"]
