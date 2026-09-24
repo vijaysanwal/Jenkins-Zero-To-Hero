@@ -58,7 +58,7 @@ stage('Update Deployment File') {
                 git config user.name "vijay sanwal"
 
                 sed -i -E \
-                "s|(image: .*amazonaws.com/test:)[0-9]+|\\1${BUILD_NUMBER}|" \
+                "s|(image: .*amazonaws.com/test:)[0-9]+|\1${BUILD_NUMBER}|" \
                 java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
                 git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
