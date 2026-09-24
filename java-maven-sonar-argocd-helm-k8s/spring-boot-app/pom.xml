@@ -23,8 +23,11 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <!-- Java 17 required by Spring Boot 3.x -->
+        <!-- Java version -->
         <java.version>17</java.version>
+
+        <!-- Override Spring Boot managed Tomcat version for security fixes -->
+        <tomcat.version>10.1.58</tomcat.version>
     </properties>
 
     <dependencies>
